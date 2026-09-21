@@ -1,0 +1,14 @@
+{
+  "name": "mastermind-md-bot",
+  "version": "1.0.0",
+  "description": "MASTER MIND MD WhatsApp Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.1",
+    "express": "^4.19.2",
+    "pino": "^9.0.0"
+  }
+}
