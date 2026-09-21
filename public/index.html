@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MASTER MIND MD - Legendary Pairing Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #05050a;
+            background-image: radial-gradient(circle at center, #101426 0%, #030307 100%);
+            color: #fff;
+            font-family: 'Rajdhani', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            overflow: hidden;
+        }
+        .container {
+            position: relative;
+            background: rgba(15, 20, 32, 0.85);
+            border: 2px solid #00f0ff;
+            border-radius: 16px;
+            padding: 35px 25px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.3), inset 0 0 15px rgba(0, 240, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 3px solid #ff0055;
+            box-shadow: 0 0 20px #ff0055;
+            object-fit: cover;
+            margin-bottom: 15px;
+        }
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: #00f0ff;
+            text-shadow: 0 0 10px #00f0ff;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            font-size: 14px;
+            color: #a0a5c0;
+            letter-spacing: 1px;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 14px;
+            background: rgba(5, 8, 15, 0.9);
+            border: 1px solid #303b5a;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 18px;
+            font-family: 'Orbitron', sans-serif;
+            text-align: center;
+            letter-spacing: 2px;
+            outline: none;
+            transition: 0.3s;
+        }
+        input[type="text"]:focus {
+            border-color: #ff0055;
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.4);
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #ff0055 0%, #7900ff 100%);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+            transition: 0.3s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(255, 0, 85, 0.8);
+        }
+        .code-box {
+            margin-top: 25px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px dashed #00f0ff;
+            border-radius: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 22px;
+            font-weight: 900;
+            color: #00ff88;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px #00ff88;
+            display: none;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #505a7a;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="https://cdn.phototourl.com/free/2026-09-20-69beb658-b75d-4cd8-a291-0f3656dfcb02.jpg" alt="MASTER MIND" class="avatar">
+        <h1>MASTER MIND MD</h1>
+        <div class="subtitle">LEGENDARY PAIRING PANEL</div>
+        
+        <div class="input-group">
+            <input type="text" id="phone" placeholder="923001234567">
+        </div>
+        
+        <button onclick="generateCode()">GENERATE PAIRING CODE</button>
+        
+        <div id="result" class="code-box"></div>
+
+        <div class="footer">POWERED BY MASTER MIND SYSTEM</div>
+    </div>
+
+    <script>
+        async function generateCode() {
+            const phoneNum = document.getElementById('phone').value.trim();
+            const resBox = document.getElementById('result');
+
+            if (!phoneNum) {
+                alert('Enter phone number with country code!');
+                return;
+            }
+
+            resBox.style.display = 'block';
+            resBox.style.color = '#00f0ff';
+            resBox.innerText = 'GENERATING...';
+
+            try {
+                const res = await fetch(`/pair?number=${phoneNum}`);
+                const data = await res.json();
+
+                if (data.code) {
+                    resBox.style.color = '#00ff88';
+                    resBox.innerText = data.code;
+                } else {
+                    resBox.style.color = '#ff0055';
+                    resBox.innerText = 'ERROR OCCURRED';
+                }
+            } catch (err) {
+                resBox.style.color = '#ff0055';
+                resBox.innerText = 'SERVER OFFLINE';
+            }
+        }
+    </script>
+</body>
+  </html>
+  
