@@ -118,7 +118,7 @@ async function startBotSocket() {
 
         if (bannedUsers.has(sender.split('@')[0])) return;
 
-        const body = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || msg.message.videoMessage?.caption || '';
+        const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text || msg.message?.imageMessage?.caption || msg.message?.videoMessage?.caption || '';
 
         if (isGroup && settings.antilink && (body.includes('chat.whatsapp.com/') || body.includes('wa.me/'))) {
             await Sock.sendMessage(from, { delete: msg.key });
