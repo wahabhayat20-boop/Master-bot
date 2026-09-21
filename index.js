@@ -48,15 +48,17 @@ function getUptime() {
     return `${days}d ${hours}h ${minutes}m ${seconds}s`;
 }
 
-async function startBotSocket() {
-    if (Sock) return Sock;
-
+async function startBotSocket(pairingNumber = null) {
     const { state, saveCreds } = await useMultiFileAuthState('./session');
     
     Sock = makeWASocket({
-        auth: makeCacheableSignalKeyStore(state, pino({ level: 'silent' })),
+        auth: {
+            creds: state.creds,
+            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
+        },
         printQRInTerminal: false,
-        logger: pino({ level: 'silent' })
+        logger: pino({ level: 'silent' }),
+        browser: ["Chrome (Linux)", "", ""]
     });
 
     Sock.ev.on('creds.update', saveCreds);
@@ -66,12 +68,23 @@ async function startBotSocket() {
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log('Connection closed. Reconnecting:', shouldReconnect);
-            Sock = null;
             if (shouldReconnect) startBotSocket();
         } else if (connection === 'open') {
             console.log('✅ MASTER MIND MD Connected to WhatsApp Successfully!');
         }
     });
+
+    if (pairingNumber && !Sock.authState.creds.registered) {
+        setTimeout(async () => {
+            try {
+                let code = await Sock.requestPairingCode(pairingNumber);
+                code = code?.match(/.{1,4}/g)?.join("-") || code;
+                console.log(`🔑 Pairing Code for ${pairingNumber}: ${code}`);
+            } catch (err) {
+                console.error('Error getting pairing code:', err);
+            }
+        }, 3000);
+    }
 
     Sock.ev.on('messages.upsert', async ({ messages, type }) => {
         if (type !== 'notify') return;
@@ -118,7 +131,7 @@ async function startBotSocket() {
 
         if (bannedUsers.has(sender.split('@')[0])) return;
 
-        const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text || msg.message?.imageMessage?.caption || msg.message?.videoMessage?.caption || '';
+        const body = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || msg.message.videoMessage?.caption || '';
 
         if (isGroup && settings.antilink && (body.includes('chat.whatsapp.com/') || body.includes('wa.me/'))) {
             await Sock.sendMessage(from, { delete: msg.key });
@@ -163,19 +176,18 @@ async function startBotSocket() {
                 case 'antibot': { settings.antibot = (text === 'on'); await Sock.sendMessage(from, { text: `🤖 *Anti-Bot:* ${settings.antibot ? 'ON ✅' : 'OFF ❌'}` }, { quoted: msg }); break; }
                 case 'antispam': { settings.antispam = (text === 'on'); await Sock.sendMessage(from, { text: `⚡ *Anti-Spam:* ${settings.antispam ? 'ON ✅' : 'OFF ❌'}` }, { quoted: msg }); break; }
                 case 'antiword': { settings.antiword = (text === 'on'); await Sock.sendMessage(from, { text: `🚫 *Anti-Word:* ${settings.antiword ? 'ON ✅' : 'OFF ❌'}` }, { quoted: msg }); break; }
-
-                case 'menu': {
+                                                                  case 'menu': {
                     const menuText = `╭━━━〔 🔥 𝙈𝘼𝙎𝙏𝙀𝙍 𝙈𝙄𝙉𝘿 𝙈𝘿 🔥 〕━━━╮
 ┃ 
 ┃ ⚙️ Prefix : [ ${botPrefix} ]
-┃ 👤 Owner  : MASTER MIND
+┃ 👤 Owner  : बैटमैन (Batman)
 ┃ ⚡ Speed  : 0.02s
 ┃ ⏳ Uptime : ${getUptime()}
 ┃
 ┣━━━⪧ ⚙️ 𝘼𝙐𝙏𝙊 𝙎𝙀𝙏𝙏𝙄𝙉𝙂𝙎
-┃ ◈ .autoreact on/off [${settings.autoreact ? 'ON' : 'OFF'}]
-┃ ◈ .autostatusview on/off [${settings.autostatusview ? 'ON' : 'OFF'}]
-┃ ◈ .autostatuslike on/off [${settings.autostatuslike ? 'ON' : 'OFF'}]
+┃ ◈ .autoreact on/off
+┃ ◈ .autostatusview on/off
+┃ ◈ .autostatuslike on/off
 ┃
 ┣━━━⪧ 👥 𝙂𝙍𝙊𝙐𝙋 𝘾𝙊𝙉𝙏𝙍𝙊𝙇
 ┃ ◈ .tagall
@@ -184,30 +196,28 @@ async function startBotSocket() {
 ┃ ◈ .groupinfo
 ┃ ◈ .kick
 ┃ ◈ .add
-┃ ◈ .p (promote)
-┃ ◈ .d (demote)
+┃ ◈ .p / .promote
+┃ ◈ .d / .demote
 ┃ ◈ .group open/close
 ┃ ◈ .link
-┃ ◈ .revoke
+┃ ◈ .revoke / .resetlink
 ┃ ◈ .setname
 ┃ ◈ .setdesc
 ┃ ◈ .mute / .unmute
-┃ ◈ .antilink on/off [${settings.antilink ? 'ON' : 'OFF'}]
-┃ ◈ .antistatus on/off [${settings.antistatus ? 'ON' : 'OFF'}]
-┃ ◈ .antispam on/off [${settings.antispam ? 'ON' : 'OFF'}]
-┃ ◈ .antibot on/off [${settings.antibot ? 'ON' : 'OFF'}]
-┃ ◈ .antiword on/off [${settings.antiword ? 'ON' : 'OFF'}]
-┃ ◈ .antidelete on/off [${settings.antidelete ? 'ON' : 'OFF'}]
+┃ ◈ .antilink on/off
+┃ ◈ .antistatus on/off
+┃ ◈ .antispam on/off
+┃ ◈ .antibot on/off
+┃ ◈ .antiword on/off
+┃ ◈ .antidelete on/off
 ┃ ◈ .warn
 ┃ ◈ .unwarn
-┃ ◈ .resetlink
 ┃ ◈ .poll
 ┃ ◈ .del
 ┃
 ┣━━━⪧ 🕵️ 𝙎𝙀𝘾𝙍𝙀𝙏 & 𝙎𝙏𝘼𝙏𝙐𝙎 𝙏𝙊𝙊𝙇𝙎
 ┃ ◈ .vv
-┃ ◈ .save
-┃ ◈ .status
+┃ ◈ .save / .status
 ┃
 ┣━━━⪧ 🔄 𝙈𝙀𝘿𝙄𝘼 𝘾𝙊𝙉𝙑𝙀𝙍𝙏𝙀𝙍𝙎
 ┃ ◈ .s / .sticker
@@ -215,18 +225,12 @@ async function startBotSocket() {
 ┃ ◈ .tomp3 / .tovoice
 ┃ ◈ .tourl
 ┃
-┣━━━⪧ 📥 𝘿𝙊𝙒𝙉𝙇𝙊𝘼𝘿𝙀𝙍
-┃ ◈ .play
-┃ ◈ .song
-┃ ◈ .video
-┃ ◈ .ytmp4
+┣━━━⪧ 📥 𝘿𝙊𝙒𝙉𝙇𝙊𝘼𝘿𝙀𝙍𝙎
+┃ ◈ .song / .play
+┃ ◈ .video / .ytmp4
 ┃ ◈ .ig / .instagram
 ┃ ◈ .fb / .facebook
 ┃ ◈ .tiktok
-┃
-┣━━━⪧ 🤖 AI 𝘾𝙃𝘼𝙏
-┃ ◈ .ai
-┃ ◈ .gpt
 ┃
 ┣━━━⪧ 🛠️ 𝙐𝙏𝙄𝙇𝙄𝙏𝙄𝙀𝙎 & 𝙎𝙔𝙎𝙏𝙀𝙈
 ┃ ◈ .google
@@ -237,7 +241,7 @@ async function startBotSocket() {
 ┃ ◈ .id
 ┃ ◈ .sc
 ┃
-┣━━━⪧ 👑 𝙊𝙒𝙉𝙀𝙍 𝙊𝙉𝙇𝙔
+┣━━━⪧ 👑 𝙊𝙒𝙉𝙀𝙍 𝙊𝙉𝙇𝗬
 ┃ ◈ .public
 ┃ ◈ .private
 ┃ ◈ .restart
@@ -249,7 +253,8 @@ async function startBotSocket() {
 ╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯`;
                     await Sock.sendMessage(from, { image: { url: "https://cdn.phototourl.com/free/2026-09-20-69beb658-b75d-4cd8-a291-0f3656dfcb02.jpg" }, caption: menuText }, { quoted: msg });
                     break;
-    }
+                }
+                
                 // GROUP CONTROL COMMANDS
                 case 'tagall': {
                     if (!isGroup) return Sock.sendMessage(from, { text: '❌ Group command only!' }, { quoted: msg });
@@ -415,24 +420,27 @@ async function startBotSocket() {
                     break;
                 }
 
-                // DOWNLOADER, AI & UTILITIES
-                case 'play':
+                // DOWNLOADERS
                 case 'song':
+                case 'play': {
+                    if (text) await Sock.sendMessage(from, { text: `🎵 *Downloading Audio for:* ${text}\n⏳ Please wait...` }, { quoted: msg });
+                    break;
+                }
                 case 'video':
-                case 'ytmp4':
+                case 'ytmp4': {
+                    if (text) await Sock.sendMessage(from, { text: `🎬 *Downloading Video for:* ${text}\n⏳ Please wait...` }, { quoted: msg });
+                    break;
+                }
                 case 'ig':
                 case 'instagram':
                 case 'fb':
                 case 'facebook':
                 case 'tiktok': {
-                    if (text) await Sock.sendMessage(from, { text: `📥 *Downloading:* ${text}\n⏳ Please wait...` }, { quoted: msg });
+                    if (text) await Sock.sendMessage(from, { text: `📥 *Fetching link data...*\n⏳ Please wait...` }, { quoted: msg });
                     break;
                 }
-                case 'ai':
-                case 'gpt': {
-                    if (text) await Sock.sendMessage(from, { text: `🤖 *MASTER MIND AI:* Hello! How can I assist you?` }, { quoted: msg });
-                    break;
-                }
+
+                // UTILITIES & SYSTEM
                 case 'google': { if (text) await Sock.sendMessage(from, { text: `🔍 https://www.google.com/search?q=${encodeURIComponent(text)}` }, { quoted: msg }); break; }
                 case 'weather': { if (text) await Sock.sendMessage(from, { text: `🌤️ *Weather in ${text}:* 28°C, Clear Sky` }, { quoted: msg }); break; }
                 case 'ping':
@@ -474,21 +482,41 @@ async function startBotSocket() {
 // Pairing Endpoint
 app.get('/pair', async (req, res) => {
     let phone = req.query.number;
-    if (!phone) return res.status(400).json({ error: 'Phone number is required' });
+    if (!phone) return res.status(400).json({ error: 'Phone number is required. Use ?number=923xxxxxxxx' });
 
     try {
-        const client = await startBotSocket();
         phone = phone.replace(/[^0-9]/g, '');
-        await delay(2000);
-        let code = await client.requestPairingCode(phone);
-        res.json({ code: code });
+        const { state, saveCreds } = await useMultiFileAuthState('./session');
+        
+        const tempSock = makeWASocket({
+            auth: {
+                creds: state.creds,
+                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
+            },
+            printQRInTerminal: false,
+            logger: pino({ level: 'silent' }),
+            browser: ["Chrome (Linux)", "", ""]
+        });
+
+        tempSock.ev.on('creds.update', saveCreds);
+
+        if (!tempSock.authState.creds.registered) {
+            await delay(2000);
+            let code = await tempSock.requestPairingCode(phone);
+            code = code?.match(/.{1,4}/g)?.join("-") || code;
+            res.json({ code: code });
+        } else {
+            res.json({ error: 'Already registered / connected' });
+        }
     } catch (error) {
         console.error('Pairing Error:', error);
         res.status(500).json({ error: 'Failed to generate pairing code' });
     }
 });
 
+startBotSocket();
+
 app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
 });
-                                                                           
+                        
