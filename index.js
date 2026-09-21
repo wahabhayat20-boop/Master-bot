@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, Delay, DisconnectReason, makeCacheableSignalKeyStore, useSingleFileAuthState } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, Delay, DisconnectReason, makeCacheableSignalKeyStore } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const express = require('express');
 const fs = require('fs');
@@ -83,7 +83,7 @@ async function startBotScript(pairingNumber = null) {
 app.get('/pair', async (req, res) => {
     const phoneNumber = req.query.phone;
     if (!phoneNumber) {
-        return res.status(400.json({ error: 'Phone number is required. Use ?phone=628xxxxxxx' }));
+        return res.status(400).json({ error: 'Phone number is required. Use ?phone=628xxxxxxx' });
     }
 
     if (sock && sock.authState.creds.registered) {
